@@ -1,0 +1,12 @@
+services:
+  api:
+    build: ./backend
+    ports: ["12200:12200"]
+    environment:
+      SLOTFLASH_DB: /data/slotflash.db
+    volumes:
+      - ./data:/data
+  web:
+    build: ./frontend
+    ports: ["7200:80"]
+    depends_on: [api]
