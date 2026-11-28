@@ -16,7 +16,11 @@ export const api = {
   createOrder: (body) => j("/api/写闪单", { method: "POST", body: JSON.stringify(body) }),
   closeOrder: (id) => j(`/api/写闪单/${id}/收口`, { method: "POST" }),
   boot: () => j("/api/启动链"),
+  promotionPolicy: () => j("/api/启动链/升格口径"),
+  readBoard: (boardId) => j(`/api/启动链/${boardId}/对读`),
   switchSlot: (body) => j("/api/启动链/切槽", { method: "POST", body: JSON.stringify(body) }),
+  promoteSlot: (pendingId) => j(`/api/升格/${pendingId}/收口`, { method: "POST" }),
+  revertPromotion: (pendingId) => j(`/api/升格/${pendingId}/撤账`, { method: "POST" }),
   setBootColor: (boardId, body) =>
     j(`/api/启动链/${boardId}/探针色`, { method: "POST", body: JSON.stringify(body) }),
   policy: () => j("/api/回退拨"),

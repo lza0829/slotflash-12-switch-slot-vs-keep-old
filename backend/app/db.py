@@ -2,6 +2,7 @@ from __future__ import annotations
 import sqlite3
 from contextlib import contextmanager
 from app.config import DB_PATH
+from app.services.common import now_iso
 
 
 def connect() -> sqlite3.Connection:
@@ -90,5 +91,37 @@ def init_schema(conn: sqlite3.Connection) -> None:
           key TEXT PRIMARY KEY,
           value TEXT NOT NULL
         );
+        CREATE TABLE IF NOT EXISTS pending_promotions (
+          id INTEGER PRIMARY KEY,
+          board_id INTEGER NOT NULL,
+          from_slot TEXT NOT NULL,
+          to_slot TEXT NOT NULL,
+          status TEXT NOT NULL,
+          opened_at TEXT NOT NULL,
+          closed_at TEXT,
+          note TEXT,
+          FOREIGN KEY(board_id) REFERENCES boards(id)
+        );
         """
     )
+    # 两条唯一索引是硬兜底：一块板最多一格现运行、最多一条未升账。
+    # 旧库若已带脏数据，建约束会失败：记一条事件后照常启动，
+    # 由对读把「角色表异常」显式报出来，不静默吞掉。
+    for ddl, detail in (
+        (
+            "CREATE UNIQUE INDEX IF NOT EXISTS ux_slots_one_active ON slots(board_id) WHERE role='现运行'",
+            "存在多格现运行，唯一约束未建立",
+        ),
+        (
+            "CREATE UNIQUE INDEX IF NOT EXISTS ux_pending_one_open ON pending_promotions(board_id) WHERE status='未升账'",
+            "存在多条未升账，唯一约束未建立",
+        ),
+    ):
+        try:
+            conn.execute(ddl)
+        except sqlite3.IntegrityError:
+            conn.execute(
+                "INSERT INTO events(kind, ref, detail, at) VALUES (?,?,?,?)",
+                ("角色表脏数据", "schema", detail, now_iso()),
+            )
+    conn.commit()
